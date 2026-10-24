@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# See COPYING in the repository root.
+set -eu
+VLC_SOURCE_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$VLC_SOURCE_ROOT/extras/qt-ui/environment.sh"
+# The local development build enables VLC's X11 compositor, including Xwayland.
+if [ -z "${QT_QPA_PLATFORM:-}" ] && [ -n "${DISPLAY:-}" ]; then
+    export QT_QPA_PLATFORM=xcb
+fi
+vlc_build=${VLC_BUILD_DIR:-"$VLC_SOURCE_ROOT/build-qt"}
+if [ ! -x "$vlc_build/bin/vlc" ]; then
+    echo "Build VLC first: extras/qt-ui/build.sh" >&2
+    exit 1
+fi
+export VLC_PLUGIN_PATH="$vlc_build/modules"
+export VLC_LIB_PATH="$vlc_build/modules"
+export VLC_LIBEXEC_PATH="$vlc_build/modules"
+exec "$vlc_build/bin/vlc" "$@"

@@ -1,0 +1,433 @@
+/*****************************************************************************
+ * Copyright (C) 2019 VLC authors and VideoLAN
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * ( at your option ) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Templates as T
+
+import VLC.MainInterface
+import VLC.Widgets as Widgets
+import VLC.Util
+import VLC.Style
+import VLC.Player
+
+T.Pane {
+    id: root
+
+    property bool paintOnly: false
+    padding: 0
+
+    readonly property color sliderColor: {
+        const theme = volControl.colorContext
+        return (volControl.position > _fullvolpos) ? theme.fg.negative : theme.fg.primary
+    }
+
+    readonly property var _player: paintOnly ? ({ muted: false, volume: .5 }) : Player
+    readonly property int _maxvol: Math.max(200, MainCtx.maxVolume)
+    readonly property real _fullvolpos: 100 / _maxvol
+    readonly property real _maxvolpos: _maxvol / 100
+
+    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
+                            implicitContentWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
+                             implicitContentHeight + topPadding + bottomPadding)
+
+    contentWidth: volumeWidget.implicitWidth
+    contentHeight: volumeWidget.implicitHeight
+
+    Keys.priority: Keys.AfterItem
+    Keys.onPressed: (event) => Navigation.defaultKeyAction(event)
+
+    RowLayout {
+        id: volumeWidget
+
+        anchors.fill: parent
+        spacing: VLCStyle.dp(8, VLCStyle.scale)
+
+        Widgets.IconToolButton{
+            id: volumeBtn
+
+            focus: true
+            paintOnly: root.paintOnly
+            text: {
+                if (_player.muted)
+                    return VLCIcons.volume_muted
+                else if (_player.volume === 0)
+                    return VLCIcons.volume_zero
+                else if (_player.volume < .33)
+                    return VLCIcons.volume_low
+                else if (_player.volume <= .66)
+                    return VLCIcons.volume_medium
+                else
+                    return VLCIcons.volume_high
+            }
+            description: qsTr("Mute")
+            implicitWidth: VLCStyle.dp(24, VLCStyle.scale)
+            implicitHeight: VLCStyle.redesign.controlHeight
+
+            contentItem: Item {
+                Image {
+                    anchors.centerIn: parent
+                    source: VLCStyle.redesignIcon("volume")
+                    width: VLCStyle.dp(24, VLCStyle.scale)
+                    height: width
+                    opacity: root._player.muted ? 0.4 : 1
+                }
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: VLCStyle.dp(20, VLCStyle.scale)
+                    height: VLCStyle.dp(1, VLCStyle.scale)
+                    rotation: -45
+                    color: VLCStyle.redesign.foreground
+                    visible: root._player.muted
+                }
+            }
+
+            AccessibleCompat.id: "muteButton"
+
+            onClicked: Player.muted = !Player.muted
+
+            Accessible.onIncreaseAction: {
+                Player.muted = false
+                Player.setVolumeUp()
+            }
+
+            Accessible.onDecreaseAction: {
+                Player.muted = false
+                Player.setVolumeDown()
+            }
+
+            Navigation.parentItem: root
+            Navigation.rightItem: volControl
+        }
+
+        Widgets.SliderExt {
+            id: volControl
+
+            // FIXME: use VLCStyle
+            implicitWidth: VLCStyle.dp(88, VLCStyle.scale)
+            implicitHeight: VLCStyle.redesign.controlHeight
+            padding: 0
+
+            // Keep SliderExt's input, accessibility and tooltip behavior. Only
+            // its paint changes: clip the exported fill to the current volume.
+            handle: Item {
+                width: 0
+                height: volControl.height
+                x: volControl.visualPosition * volControl.availableWidth
+            }
+
+            background: Item {
+                implicitWidth: VLCStyle.dp(88, VLCStyle.scale)
+                implicitHeight: VLCStyle.redesign.controlHeight
+                Image {
+                    anchors.centerIn: parent
+                    source: "qrc:/qt/modern/volume-track.svg"
+                    width: VLCStyle.dp(89, VLCStyle.scale)
+                    height: VLCStyle.dp(27.3633, VLCStyle.scale)
+                }
+                Item {
+                    x: VLCStyle.dp(1.5, VLCStyle.scale)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: VLCStyle.dp(86, VLCStyle.scale) * volControl.position
+                    height: VLCStyle.dp(24.56, VLCStyle.scale)
+                    clip: true
+                    Image {
+                        source: "qrc:/qt/modern/volume-fill.svg"
+                        width: VLCStyle.dp(86, VLCStyle.scale)
+                        height: VLCStyle.dp(24.56, VLCStyle.scale)
+                    }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: VLCStyle.redesign.radius
+                    color: "transparent"
+                    border.width: volControl.visualFocus ? VLCStyle.border : 0
+                    border.color: VLCStyle.redesign.accent
+                }
+            }
+
+            // WARNING: Directly setting the insets break handle and background positioning.
+            Binding on topInset {
+                when: MainCtx.usingTouch
+                value: VLCStyle.touchHandlerMargin
+            }
+            Binding on bottomInset {
+                when: MainCtx.usingTouch
+                value: VLCStyle.touchHandlerMargin
+            }
+
+            Layout.fillHeight: true
+            Layout.margins: 0
+
+            property bool _inhibitPlayerVolumeUpdate: false
+
+            // FIXME: Currently we are not updating the ShiftModifier status while dragging. This
+            //        could be fixed with a custom Slider based on a MouseArea.
+            property bool _shiftPressed: false
+
+            property real _clamp: 0.01
+
+            property bool _keyPressed: false
+
+            property bool filterEvents: false
+
+            color: root.sliderColor
+
+            from: 0
+            to: root._maxvolpos
+            opacity: _player.muted ? 0.5 : 1
+
+            enabled: !root.paintOnly // disables event handling depending on this
+
+            Accessible.name: qsTr("Volume")
+            AccessibleCompat.id: "volumeSlider"
+
+            Keys.onPressed: (event) => {
+                if (KeyHelper.matchOk(event)) {
+                    event.accepted = true
+
+                    _keyPressed = true
+                } else {
+                    Navigation.defaultKeyAction(event)
+                }
+            }
+
+            Keys.onReleased: (event) => {
+                if (_keyPressed === false)
+                    return
+
+                _keyPressed = false
+
+                if (KeyHelper.matchOk(event)) {
+                    Player.muted = !Player.muted
+                }
+            }
+
+            function _syncVolumeWithPlayer() {
+                volControl._inhibitPlayerVolumeUpdate = true
+                volControl.value = Math.max(0, _player.volume)
+                volControl._inhibitPlayerVolumeUpdate = false
+            }
+
+            function _adjustPlayerVolume() {
+                Player.muted = false
+
+                let value = volControl.value
+
+                // NOTE: We are clamping the value to make it easier to restore the default volume.
+                if (_shiftPressed === false) {
+                    if (Math.abs(value - 1.0) < _clamp)
+                        value = 1.0
+                    else
+                        _clamp = 0.01
+                }
+
+                Player.volume = value
+
+                volControl.value = value
+            }
+
+            Component.onCompleted: {
+                root.paintOnlyChanged.connect(_syncVolumeWithPlayer)
+                volControl._syncVolumeWithPlayer()
+            }
+
+            Connections {
+                target: Player
+                enabled: !paintOnly
+
+                function onVolumeChanged() { volControl._syncVolumeWithPlayer() }
+            }
+
+            // Keep this readout in the Qt scene, above the slider. A separate
+            // native popup can steal hover and repeatedly close/reopen itself.
+            Widgets.PointingToolTipAttached.visible: false
+
+            T.ToolTip {
+                id: volumeToolTip
+                parent: volControl
+                popupType: T.Popup.Item
+                visible: !root.paintOnly && (volControl.hovered || volControl.visualFocus
+                                            || volControl.pressed || sliderMouseArea.pressed)
+                text: Math.round(Math.max(0, root._player.volume) * 100) + "%"
+                x: Math.max(0, Math.min(volControl.width - width,
+                                       volControl._tooltipX - width / 2))
+                y: -height - VLCStyle.dp(8, VLCStyle.scale)
+                padding: VLCStyle.dp(6, VLCStyle.scale)
+                implicitWidth: implicitContentWidth + leftPadding + rightPadding
+                implicitHeight: implicitContentHeight + topPadding + bottomPadding
+                contentItem: Text {
+                    text: volumeToolTip.text
+                    font.pixelSize: VLCStyle.fontSize_normal
+                    color: VLCStyle.redesign.foreground
+                }
+                background: Rectangle {
+                    radius: VLCStyle.redesign.radius
+                    color: VLCStyle.redesign.surface
+                    border.width: VLCStyle.border
+                    border.color: VLCStyle.redesign.accent
+                }
+            }
+
+            Navigation.leftItem: volumeBtn
+            Navigation.parentItem: root
+
+            Keys.onUpPressed: (event) => {
+                Player.muted = false
+                Player.setVolumeUp()
+            }
+
+            Keys.onDownPressed: (event) => {
+                Player.muted = false
+                Player.setVolumeDown()
+            }
+
+            Keys.priority: Keys.BeforeItem
+
+            onValueChanged: {
+                if (paintOnly)
+                    return
+
+                if (!volControl._inhibitPlayerVolumeUpdate) {
+                    if (filterEvents) {
+                        Qt.callLater(volControl._adjustPlayerVolume)
+                    } else {
+                        volControl._adjustPlayerVolume()
+                        filterEvents = true
+                    }
+                }
+            }
+
+            Rectangle{
+                id: tickmark
+
+                parent: volControl.background
+
+                x : parent.width * root._fullvolpos
+                width: VLCStyle.dp(1, VLCStyle.scale)
+                height: parent.height
+                radius: VLCStyle.dp(2, VLCStyle.scale)
+
+                // NOTE: This shouldn't be visible when the volume stops before a 100.
+                visible: (root._maxvol > 100) && (volControl.hovered || volControl.visualFocus)
+
+                // FIXME: tick mark is not visible when it's over slider
+                color: root.sliderColor
+
+                // NOTE: This is a helper to select the default volume when clicking on the
+                //       tickmark. We apply a higher clamp value to achieve that behavior on
+                //       the Slider.
+                MouseArea {
+                    anchors.fill: parent
+
+                    anchors.margins: -(VLCStyle.dp(4, VLCStyle.scale))
+
+                    onPressed: (mouse) => {
+                        mouse.accepted = false
+
+                        if (mouse.modifiers === Qt.ShiftModifier)
+                            return
+
+                        volControl._clamp = 0.1
+                    }
+                }
+            }
+
+            MouseArea {
+                id: sliderMouseArea
+
+                anchors.fill: parent
+
+                acceptedButtons: (Qt.LeftButton | Qt.RightButton)
+
+                onPressed: (mouse) => {
+                    if (root.paintOnly) {
+                        mouse.accepted = true
+                        return
+                    }
+
+                    volControl._shiftPressed = (mouse.modifiers === Qt.ShiftModifier)
+
+                    if (mouse.button === Qt.LeftButton) {
+                        mouse.accepted = false
+
+                        return
+                    }
+
+                    volControl.filterEvents = false
+                    adjustVolume(mouse)
+                }
+
+                onPositionChanged: (mouse) => {
+                    if (mouse.buttons & Qt.RightButton)
+                        adjustVolume(mouse)
+                }
+
+                onWheel: (wheel) => {
+
+                    if ((Math.abs(wheel.pixelDelta.x) % 120 > 0) || (Math.abs(wheel.pixelDelta.y) % 120 > 0)) {
+                        let delta = 0
+                        if (Math.abs(wheel.pixelDelta.x) > Math.abs(wheel.pixelDelta.y))
+                            delta = wheel.pixelDelta.x
+                        else
+                            delta = wheel.pixelDelta.y
+
+                        if (wheel.inverted)
+                            delta = -delta
+                        volControl.value += 0.001 * delta
+                    }
+                    else
+                        wheelToVLC.qmlWheelEvent(wheel)
+
+                    wheel.accepted = true
+                }
+
+                function adjustVolume(mouse) {
+                    mouse.accepted = true
+
+                    const pos = mouse.x * root._maxvolpos / width
+
+                    if (pos < 0.25)
+                        volControl.value = 0
+                    else if (pos < 0.75)
+                        volControl.value = 0.5
+                    else if (pos < 1.125)
+                        volControl.value = 1
+                    else
+                        volControl.value = Math.min(root._maxvolpos, Math.round(pos * 4) / 4)
+                }
+
+                WheelToVLCConverter {
+                    id: wheelToVLC
+
+                    function handle(steps: int) {
+                        if (steps > 0)
+                            Player.setVolumeUp(steps)
+                        else
+                            Player.setVolumeDown(-steps)
+                    }
+
+                    Component.onCompleted: {
+                        wheelUpDown.connect(wheelToVLC.handle)
+                        wheelLeftRight.connect(wheelToVLC.handle)
+                    }
+                }
+            }
+        }
+    }
+}
