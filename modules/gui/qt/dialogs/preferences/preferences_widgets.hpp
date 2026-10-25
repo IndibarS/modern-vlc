@@ -55,23 +55,6 @@ class QSlider;
 class QAbstractButton;
 class WheelToVLCConverter;
 
-/*******************************************************
- * Simple widgets
- *******************************************************/
-
-class InterfacePreviewWidget : public QLabel
-{
-    Q_OBJECT
-public:
-    InterfacePreviewWidget( QWidget * );
-    enum enum_style {
-                 COMPLETE, // aka MPC
-                 MINIMAL,  // aka WMP12 minimal
-                 SKINS };
-public slots:
-    void setPreview( enum_style );
-    void setNormalPreview( bool b_minimal );
-};
 
 /*******************************************************
  * Variable controls

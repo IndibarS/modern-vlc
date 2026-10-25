@@ -85,6 +85,8 @@ FocusScope{
     signal forceUnlock()
     readonly property bool csdButtonHovered: showCSD && !!csdDecorations.item?.buttonHovered
     onCsdButtonHoveredChanged: requestLockUnlockAutoHide(csdButtonHovered)
+    readonly property bool csdMenuVisible: showCSD && !!tapNDrag.item?.csdMenuVisible
+    onCsdMenuVisibleChanged: requestLockUnlockAutoHide(csdMenuVisible)
 
     // Settings
 
@@ -225,13 +227,6 @@ FocusScope{
         active: root.showCSD
         source: "qrc:///qt/qml/VLC/Widgets/CSDTitlebarTapNDrapHandler.qml"
 
-        Connections {
-            target: tapNDrag.item
-            enabled: tapNDrag.status === Loader.Ready
-            function onCsdMenuVisibleChanged() {
-                root.requestLockUnlockAutoHide(tapNDrag.item.csdMenuVisible)
-            }
-        }
     }
 
     // Components -
@@ -306,7 +301,7 @@ FocusScope{
             Accessible.name: qsTr("Back to media library")
             onClicked: root.backRequested()
             property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+            onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
             Navigation.parentItem: root
             Navigation.leftItem: compactPlaylist
             Keys.onPressed: (event) => Navigation.defaultKeyAction(event)
@@ -409,7 +404,7 @@ FocusScope{
                 onClicked: root.backRequested()
 
                 property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+                onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
             }
 
             Widgets.BannerCone {
@@ -542,7 +537,7 @@ FocusScope{
             Accessible.name: qsTr("Exit fullscreen")
             onClicked: MainCtx.exitFullscreen()
             property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+            onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
             T.ToolTip.text: qsTr("Exit fullscreen")
             T.ToolTip.visible: hovered
         }
@@ -555,7 +550,7 @@ FocusScope{
             Accessible.name: qsTr("Quit VLC")
             onClicked: DialogsProvider.quit()
             property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+            onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
             T.ToolTip.text: qsTr("Quit VLC")
             T.ToolTip.visible: hovered
         }
@@ -627,7 +622,7 @@ FocusScope{
             onClicked: contextMenu.popup(this.mapToGlobal(0, height))
 
             property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+            onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
 
             Menus.QmlGlobalMenu {
                 id: contextMenu
@@ -673,7 +668,7 @@ FocusScope{
             Accessible.onToggleAction:togglePlaylistVisibility()
 
             property bool autoHideHovered: visible && hovered
-        onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
+            onAutoHideHoveredChanged: root.requestLockUnlockAutoHide(autoHideHovered)
         }
     }
 }

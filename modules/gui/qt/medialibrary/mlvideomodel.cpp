@@ -142,7 +142,7 @@ void MLVideoModel::onVlcMlEvent(const MLEvent &event)
             break;
     }
 
-    MLBaseModel::onVlcMlEvent(event);
+    MLMediaModel::onVlcMlEvent(event);
 }
 
 std::unique_ptr<MLListCacheLoader>

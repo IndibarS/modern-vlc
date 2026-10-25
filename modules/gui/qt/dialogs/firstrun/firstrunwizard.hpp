@@ -32,8 +32,7 @@ class FirstRunWizard : public QWizard
 
 public:
     explicit FirstRunWizard ( qt_intf_t*, QWidget* parent = nullptr );
-    enum { WELCOME_PAGE, FOLDER_PAGE, COLOR_SCHEME_PAGE, LAYOUT_PAGE };
-    enum { MODERN, CLASSIC };
+    enum { WELCOME_PAGE, FOLDER_PAGE, COLOR_SCHEME_PAGE };
 
     void addDefaults();
 
@@ -52,15 +51,12 @@ private:
 
     QButtonGroup* colorSchemeGroup = nullptr;
     QButtonGroup* colorSchemeImages = nullptr;
-    QButtonGroup* layoutImages = nullptr;
 
 private slots:
     void finish();
     void MLaddNewFolder();
     void updateColorLabel( QAbstractButton* );
-    void updateLayoutLabel (QAbstractButton* );
     void imageColorSchemeClick ( QAbstractButton* );
-    void imageLayoutClick( QAbstractButton* );
 };
 
 #endif // VLC_FIRSTRUNWIZARD_H

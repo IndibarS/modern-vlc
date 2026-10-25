@@ -673,7 +673,8 @@ static inline void RenderAXYZ( filter_t *p_filter,
     const text_style_t *p_style = p_sys->p_default_style;
     uint8_t i_x, i_y, i_z;
 
-    if (p_region_in->text_flags & VLC_SUBPIC_TEXT_FLAG_NO_REGION_BG) {
+    if (p_sys->subtitle_card_theme ||
+        (p_region_in->text_flags & VLC_SUBPIC_TEXT_FLAG_NO_REGION_BG)) {
         /* Render the background just under the text */
         draw->fill( p_picture, STYLE_ALPHA_TRANSPARENT, 0x00, 0x00, 0x00,
                    0, 0, p_region->fmt.i_visible_width, p_region->fmt.i_visible_height );
@@ -684,13 +685,35 @@ static inline void RenderAXYZ( filter_t *p_filter,
                    0, 0, p_region->fmt.i_visible_width, p_region->fmt.i_visible_height );
     }
 
-    /* Render text's background (from decoder) if any */
-    RenderBackground(p_region_in, p_line_head,
-                     p_regionbbox, p_paddedtextbbox, p_textbbox,
-                     p_picture, draw);
+    if (p_sys->subtitle_card_theme)
+    {
+        /* One translucent card around the text block, with rounded corners. */
+        const int left = __MAX(0, p_paddedtextbbox->xMin - p_regionbbox->xMin);
+        const int top = __MAX(0, p_regionbbox->yMax - p_paddedtextbbox->yMax);
+        const int right = __MIN((int)p_picture->format.i_visible_width,
+                               p_paddedtextbbox->xMax - p_regionbbox->xMin);
+        const int bottom = __MIN((int)p_picture->format.i_visible_height,
+                                p_regionbbox->yMax - p_paddedtextbbox->yMin);
+        const int width = right - left, height = bottom - top;
+        const int radius = __MIN(__MIN(width, height) / 2, __MAX(2, height / 8));
+        draw->extract(p_style->i_background_color, &i_x, &i_y, &i_z);
+        for (int y = 0; y < height; ++y)
+        {
+            const float dy = __MAX(0.f, radius - __MIN(y + .5f, height - y - .5f));
+            const float corner_inset = ceilf(radius - sqrtf(radius * radius - dy * dy));
+            const int inset = (int)corner_inset;
+            if (width > 2 * inset)
+                draw->fill(p_picture, p_style->i_background_alpha, i_x, i_y, i_z,
+                           left + inset, top + y, width - 2 * inset, 1);
+        }
+    }
+    else
+        RenderBackground(p_region_in, p_line_head,
+                         p_regionbbox, p_paddedtextbbox, p_textbbox,
+                         p_picture, draw);
 
-    /* Render shadow then outline and then normal glyphs */
-    for( int g = 0; g < 3; g++ )
+    /* Cards need no shadow or outline. Authored styles retain all three passes. */
+    for( int g = p_sys->subtitle_card_theme ? 2 : 0; g < 3; g++ )
     {
         /* Render all lines */
         for( const line_desc_t *p_line = p_line_head; p_line != NULL; p_line = p_line->p_next )
@@ -718,6 +741,16 @@ static void UpdateDefaultLiveStyles( filter_t *p_filter )
     p_style->i_background_color = var_InheritInteger( p_filter, "freetype-background-color" );
 
     p_sys->i_outline_thickness = var_InheritInteger( p_filter, "freetype-outline-thickness" );
+
+    /* Qt opts in on the instance; other interfaces retain their renderer settings. */
+    p_sys->subtitle_card_theme = var_GetInteger( vlc_object_instance(p_filter), "qt-subtitle-card" );
+    if (p_sys->subtitle_card_theme)
+    {
+        p_style->i_background_alpha = 195;
+        p_style->i_background_color = p_sys->subtitle_card_theme == 2 ? 0xFFFFFF : 0;
+        p_style->i_font_color = p_sys->subtitle_card_theme == 2 ? 0 : 0xFFFFFF;
+        p_sys->i_outline_thickness = 0;
+    }
 }
 
 static void FillDefaultStyles( filter_t *p_filter )
@@ -895,6 +928,17 @@ static size_t AddTextAndStyles( filter_sys_t *p_sys,
 
     /* Overwrite any default or value with forced ones */
     text_style_Merge( p_mgstyle, p_sys->p_forced_style, true );
+
+    if (p_sys->subtitle_card_theme)
+    {
+        p_mgstyle->i_font_color = p_sys->p_default_style->i_font_color;
+        p_mgstyle->i_font_alpha = STYLE_ALPHA_OPAQUE;
+        p_mgstyle->i_shadow_alpha = STYLE_ALPHA_TRANSPARENT;
+        p_mgstyle->i_outline_alpha = STYLE_ALPHA_TRANSPARENT;
+        p_mgstyle->i_style_flags &= ~(STYLE_SHADOW | STYLE_OUTLINE);
+        p_mgstyle->f_font_relsize *= .8f;
+        p_mgstyle->i_font_size = (int)(p_mgstyle->i_font_size * .8f);
+    }
 
     /* map it to each char of that segment */
     for ( size_t i = 0; i < i_newchars; ++i )

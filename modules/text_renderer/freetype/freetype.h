@@ -113,6 +113,7 @@ typedef struct
     vlc_font_select_t *fs;
     vlc_ftcache_t     *ftcache;
 
+    int subtitle_card_theme; /* 0: authored style, 1: day, 2: night */
 } filter_sys_t;
 
 /**

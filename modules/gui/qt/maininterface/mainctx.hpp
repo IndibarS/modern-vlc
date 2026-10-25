@@ -420,6 +420,8 @@ public:
 #endif
 
 protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
+
     /* Systray */
     void initSystray();
 

@@ -167,44 +167,6 @@ ConfigControl *ConfigControl::createControl( module_config_t *item,
     return control;
 }
 
-/*******************************************************
- * Simple widgets
- *******************************************************/
-InterfacePreviewWidget::InterfacePreviewWidget ( QWidget *parent ) : QLabel( parent )
-{
-    setGeometry( 0, 0, 128, 100 );
-    setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-}
-
-void InterfacePreviewWidget::setNormalPreview( bool b_minimal )
-{
-    setPreview( ( b_minimal ) ? MINIMAL : COMPLETE );
-}
-
-void InterfacePreviewWidget::setPreview( enum_style e_style )
-{
-    QString pixmapLocationString;
-
-    switch( e_style )
-    {
-    default:
-    case COMPLETE:
-        pixmapLocationString = ":/prefsmenu/sample_complete.png";
-        break;
-    case MINIMAL:
-        pixmapLocationString = ":/prefsmenu/sample_minimal.png";
-        break;
-    case SKINS:
-        pixmapLocationString = ":/prefsmenu/sample_skins.png";
-        break;
-    }
-
-    setPixmap( QPixmap( pixmapLocationString ).
-               scaledToWidth( width(), Qt::SmoothTransformation ) );
-    update();
-}
-
-
 /**************************************************************************
  * String-based controls
  *************************************************************************/

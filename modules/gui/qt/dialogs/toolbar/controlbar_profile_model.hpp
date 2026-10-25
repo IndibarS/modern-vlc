@@ -50,8 +50,7 @@ public:
         DEFAULT_STYLE,
         MINIMALIST_STYLE,
         ONE_LINER_STYLE,
-        SIMPLEST_STYLE,
-        CLASSIC_STYLE
+        SIMPLEST_STYLE
     };
 
     // Editable:

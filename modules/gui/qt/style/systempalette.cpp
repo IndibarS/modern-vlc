@@ -972,6 +972,56 @@ QPalette SystemPalette::widgetPalette() const
     return result;
 }
 
+// Palette roles keep every native dialog in step with live theme changes.
+QString SystemPalette::widgetStyleSheet()
+{
+    return QStringLiteral(R"(
+QDialog, QWizard { background: palette(window); color: palette(window-text); }
+QPushButton, QToolButton {
+    background: palette(button); color: palette(button-text);
+    border: 1px solid palette(mid); border-radius: 6px; padding: 6px 10px;
+}
+QPushButton:hover, QToolButton:hover { border-color: palette(highlight); }
+QPushButton:pressed, QToolButton:checked { background: palette(alternate-base); }
+QPushButton:default, QPushButton:focus { border-color: palette(highlight); }
+QPushButton:disabled, QToolButton:disabled { color: palette(mid); }
+QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox, QComboBox {
+    background: palette(base); color: palette(text); border: 1px solid palette(mid);
+    border-radius: 5px; padding: 5px; selection-background-color: palette(highlight);
+    selection-color: palette(highlighted-text);
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QAbstractSpinBox:focus,
+QComboBox:focus { border-color: palette(highlight); }
+QMenu, QComboBox QAbstractItemView {
+    background: palette(window); color: palette(window-text);
+    border: 1px solid palette(mid); padding: 5px;
+}
+QMenu::item { padding: 6px 24px; border-radius: 4px; }
+QMenu::item:selected { background: palette(highlight); color: palette(highlighted-text); }
+QMenu::item:disabled { color: palette(mid); }
+QMenu::separator { height: 1px; background: palette(mid); margin: 5px 8px; }
+QMenuBar { background: palette(window); color: palette(window-text); }
+QMenuBar::item:selected { background: palette(button); border-radius: 4px; }
+QToolTip { background: palette(tool-tip-base); color: palette(tool-tip-text);
+    border: 1px solid palette(mid); border-radius: 5px; padding: 6px; }
+QGroupBox { border: 1px solid palette(mid); border-radius: 7px;
+    margin-top: 12px; padding-top: 10px; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
+QTabWidget::pane { border: 1px solid palette(mid); border-radius: 6px; }
+QTabBar::tab { background: palette(button); color: palette(button-text);
+    padding: 7px 12px; border-bottom: 2px solid transparent; }
+QTabBar::tab:selected { border-bottom-color: palette(highlight); background: palette(window); }
+QAbstractItemView { background: palette(base); alternate-background-color: palette(alternate-base);
+    color: palette(text); border: 1px solid palette(mid); border-radius: 5px;
+    selection-background-color: palette(highlight); selection-color: palette(highlighted-text); }
+QHeaderView::section { background: palette(button); color: palette(button-text);
+    border: none; border-bottom: 1px solid palette(mid); padding: 6px; }
+QProgressBar { border: 1px solid palette(mid); border-radius: 5px;
+    background: palette(base); text-align: center; }
+QProgressBar::chunk { background: palette(highlight); border-radius: 4px; }
+)");
+}
+
 void SystemPalette::makeSystemPalette()
 {
     if (!m_ctx)

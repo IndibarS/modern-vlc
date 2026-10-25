@@ -70,8 +70,8 @@
 #include <wrl/client.h>
 #endif
 
-#define ICON_HEIGHT 48
-#define ICON_WIDTH 48
+#define ICON_HEIGHT 28
+#define ICON_WIDTH 28
 
 #ifdef _WIN32
 # include <vlc_charset.h>
@@ -254,14 +254,14 @@ SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
         layout->addWidget( button );
     };
 
-    addCategory( qfut(INTF_TITLE), qfut(INTF_TOOLTIP), ":/prefsmenu/spref_interface.png" , SPrefsInterface );
-    addCategory( qfut(AUDIO_TITLE), qfut(AUDIO_TOOLTIP), ":/prefsmenu/spref_audio.png", SPrefsAudio );
-    addCategory( qfut(VIDEO_TITLE), qfut(VIDEO_TOOLTIP), ":/prefsmenu/spref_video.png", SPrefsVideo );
-    addCategory( qfut(SUBPIC_TITLE), qfut(SUBPIC_TOOLTIP), ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles );
-    addCategory( qfut(INPUT_TITLE), qfut(INPUT_TOOLTIP), ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs );
-    addCategory( qfut(HOTKEYS_TITLE), qfut(HOTKEYS_TOOLTIP), ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys );
+    addCategory( qfut(INTF_TITLE), qfut(INTF_TOOLTIP), ":/qt/modern/sidebar.svg" , SPrefsInterface );
+    addCategory( qfut(AUDIO_TITLE), qfut(AUDIO_TOOLTIP), ":/qt/modern/audio.svg", SPrefsAudio );
+    addCategory( qfut(VIDEO_TITLE), qfut(VIDEO_TOOLTIP), ":/qt/modern/fullscreen.svg", SPrefsVideo );
+    addCategory( qfut(SUBPIC_TITLE), qfut(SUBPIC_TOOLTIP), ":/qt/modern/subtitles.svg", SPrefsSubtitles );
+    addCategory( qfut(INPUT_TITLE), qfut(INPUT_TOOLTIP), ":/qt/modern/settings.svg", SPrefsInputAndCodecs );
+    addCategory( qfut(HOTKEYS_TITLE), qfut(HOTKEYS_TOOLTIP), ":/qt/modern/more.svg", SPrefsHotkeys );
     if ( vlc_ml_instance_get( p_intf ) != nullptr )
-        addCategory( qfut(ML_TITLE), qfut(ML_TOOLTIP), ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary );
+        addCategory( qfut(ML_TITLE), qfut(ML_TOOLTIP), ":/qt/modern/folder.svg", SPrefsMediaLibrary );
 
     qobject_cast<QToolButton*>(mapper->mapping(SPrefsInterface))->setChecked(true);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -778,7 +778,6 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
             radioGroup = new QButtonGroup(this);
             radioGroup->addButton( ui.modernButton, 0 );
-            radioGroup->addButton( ui.classicButton, 1 );
             radioGroup->addButton( ui.skins, 2 );
 
             configBool( "qt-minimal-view", ui.minimalviewBox );
@@ -790,8 +789,6 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
             /*Clicking on image will check the corresponding layout radio button*/
             layoutImages = new QButtonGroup( this );
-            layoutImages->addButton( ui.modernImage, 0 );
-            layoutImages->addButton( ui.classicImage, 1 );
             layoutImages->addButton( ui.skinImage, 2 );
 
             connect( layoutImages, qOverload<QAbstractButton*>( &QButtonGroup::buttonClicked ), this, &SPrefsPanel::imageLayoutClick );
@@ -1128,7 +1125,7 @@ SPrefsPanel::~SPrefsPanel()
 /* Checks the layout radio button corresponding the image clicked */
 void SPrefsPanel::imageLayoutClick( QAbstractButton* btn )
 {
-    QAbstractButton* layoutBtn = radioGroup->buttons().at( layoutImages->id( btn ) );
+    QAbstractButton* layoutBtn = radioGroup->button( layoutImages->id( btn ) );
     assert( layoutBtn );
     layoutBtn->setChecked( true );
 }
@@ -1144,13 +1141,7 @@ void SPrefsPanel::handleLayoutChange( int id )
         ui.titleBarCheckBox->setChecked(false);
         ui.pinVideoControlsCheckbox->setChecked(false);
     }
-    else if (id == 1) {
-        // Classic layout selected
-        ui.styleStackedWidget->setCurrentIndex(0);
-        ui.menuBarCheck->setChecked(true);
-        ui.titleBarCheckBox->setChecked(true);
-        ui.pinVideoControlsCheckbox->setChecked(true);
-    }
+
     else if (id == 2) {
         ui.styleStackedWidget->setCurrentIndex(1);
     }
@@ -1165,16 +1156,9 @@ void SPrefsPanel::updateLayoutSelection()
 
     ui.modernButton->setChecked(isModern);
 
-    bool isClassic = ui.menuBarCheck->isChecked()
-                     && ui.titleBarCheckBox->isChecked()
-                     && ui.pinVideoControlsCheckbox->isChecked();
-
-    ui.classicButton->setChecked(isClassic);
-
-    if (!isModern && !isClassic) {
+    if (!isModern) {
         radioGroup->setExclusive(false);
         ui.modernButton->setChecked(false);
-        ui.classicButton->setChecked(false);
         radioGroup->setExclusive(true);
     }
 }

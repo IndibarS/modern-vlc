@@ -107,9 +107,9 @@ def colored(image, box, predicate):
 
 def network_dialog():
     click(65, 18)
-    run('xdotool', 'mousemove', 90, 45)
-    time.sleep(.5)
-    click(250, 150)
+    run('xdotool', 'key', '--clearmodifiers', 'm')
+    time.sleep(.3)
+    run('xdotool', 'key', '--clearmodifiers', 'n')
     dialog = wait_for(lambda: windows('--name', '^Open Network Stream$'), 'network dialog did not open')[-1]
     run('xdotool', 'windowmove', dialog, 0, 0)
     time.sleep(.4)
@@ -260,6 +260,18 @@ try:
                 wait_for(lambda: not window_fullscreen(), 'button did not exit interface fullscreen')
                 record('Escape, configured fullscreen key and button clear interface fullscreen')
                 click(85, 773)
+
+        if ARGS.floating:
+            # Exercise locks acquired by the volume popup and recreated CSD buttons.
+            run('xdotool', 'mousemove', 1060, 765)
+            time.sleep(.6)
+            run('xdotool', 'mousemove', 640, 400)
+            time.sleep(6)
+            idle = capture(main, 'controls-idle-after-fullscreen')
+            assert colored(idle, (40, 755, 1100, 790), lambda r,g,b: r>150 and 65<g<160 and b<60)<10, 'controls remain locked after leaving volume/fullscreen buttons'
+            record('Playing controls hide after volume hover and fullscreen transitions')
+            run('xdotool', 'mousemove', 85, 773)
+            time.sleep(.5)
 
         click(85, 773)
         wait_for(lambda: 'VLC_PLAYER_STATE_PAUSED' in log_path.read_text(errors='replace'), 'pause was not delivered')

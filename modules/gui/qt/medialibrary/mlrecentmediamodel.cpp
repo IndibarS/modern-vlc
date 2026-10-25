@@ -71,7 +71,7 @@ void MLRecentMediaModel::onVlcMlEvent( const MLEvent &event )
         default:
             break;
     }
-    MLBaseModel::onVlcMlEvent( event );
+    MLMediaModel::onVlcMlEvent( event );
 }
 
 std::unique_ptr<MLListCacheLoader>

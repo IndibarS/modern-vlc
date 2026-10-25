@@ -241,6 +241,7 @@ T.ProgressBar {
 
     HoverHandler {
         id: hoverHandler
+        cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
 
         onHoveredChanged: () => {
             if (hovered) {

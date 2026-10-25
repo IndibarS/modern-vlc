@@ -25,6 +25,7 @@
 
 #include "mlbasemodel.hpp"
 #include <QSet>
+#include <QHash>
 #include "mlmedia.hpp"
 #include "mlvideo.hpp"
 #include "mlaudio.hpp"
@@ -71,6 +72,8 @@ protected:
 private:
     vlc_ml_sorting_criteria_t nameToCriteria(QByteArray name) const override;
     void generateThumbnail(const MLVideo *video) const;
+    void retryThumbnail(MLItemId id);
+    QSet<int64_t> m_thumbnailRetryPending;
     mutable QSet<int64_t> m_requestedThumbnails;
     mutable QHash<int64_t, unsigned> m_thumbnailAttempts;
 

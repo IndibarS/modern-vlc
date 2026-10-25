@@ -151,6 +151,7 @@ public:
                     ColorContext::ColorName name, ColorContext::ColorState state) const;
 
     QPalette widgetPalette() const;
+    static QString widgetStyleSheet();
 
     void classBegin() override { }
     void componentComplete() override;

@@ -46,6 +46,8 @@
 #include "util/color_scheme_model.hpp"
 #include "style/systempalette.hpp"
 #include <QApplication>
+#include <QAbstractButton>
+#include <QComboBox>
 
 #include "widgets/native/interface_widgets.hpp"     // bgWidget, videoWidget
 
@@ -189,6 +191,12 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
     });
 #endif
 
+    qApp->setStyleSheet(SystemPalette::widgetStyleSheet());
+    qApp->installEventFilter(this);
+    var_Create(vlc_object_instance(p_intf), "qt-subtitle-card", VLC_VAR_INTEGER);
+    var_SetInteger(vlc_object_instance(p_intf), "qt-subtitle-card",
+                   QApplication::palette().color(QPalette::Window).lightness() < 128 ? 2 : 1);
+
     // QML and Widgets must follow the same explicit Day/Night selection.
     // System mode restores the platform palette instead of feeding a custom
     // palette back into the platform theme provider.
@@ -196,6 +204,8 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
         if (m_colorScheme->currentScheme() == ColorSchemeModel::System)
         {
             QApplication::setPalette(QPalette());
+            var_SetInteger(vlc_object_instance(p_intf), "qt-subtitle-card",
+                           QApplication::palette().color(QPalette::Window).lightness() < 128 ? 2 : 1);
             return;
         }
         SystemPalette theme;
@@ -203,6 +213,8 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
         theme.setSource(m_colorScheme->currentScheme());
         theme.componentComplete();
         QApplication::setPalette(theme.widgetPalette());
+        var_SetInteger(vlc_object_instance(p_intf), "qt-subtitle-card",
+                       theme.widgetPalette().color(QPalette::Window).lightness() < 128 ? 2 : 1);
     });
 
     m_sort = new SortCtx(this);
@@ -326,8 +338,22 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
     m_initialEffectiveMainInterfaceMode = getEffectiveMainInterfaceMode();
 }
 
+bool MainCtx::eventFilter(QObject *object, QEvent *event)
+{
+    if (event->type() == QEvent::Polish)
+    {
+        if (auto *button = qobject_cast<QAbstractButton *>(object))
+            button->setCursor(Qt::PointingHandCursor);
+        else if (auto *combo = qobject_cast<QComboBox *>(object); combo && !combo->isEditable())
+            combo->setCursor(Qt::PointingHandCursor);
+    }
+    return QObject::eventFilter(object, event);
+}
+
 MainCtx::~MainCtx()
 {
+    qApp->removeEventFilter(this);
+    var_Destroy(vlc_object_instance(p_intf), "qt-subtitle-card");
     /* Save states */
 
     m_threadRunner->destroy();

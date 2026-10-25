@@ -1,4 +1,3 @@
-#include <QTimer>
 /******************************************************************************
  * Copyright (C) 2024 VLC authors and VideoLAN
  *
@@ -23,6 +22,7 @@
 #include "mlmediamodel.hpp"
 #include "mlhelper.hpp"
 #include <QFile>
+#include <QTimer>
 
 MLMediaModel::MLMediaModel(QObject *par)
     : MLBaseModel(par)
@@ -195,6 +195,22 @@ void MLMediaModel::onVlcMlEvent(const MLEvent &event)
 {
     switch(event.i_type)
     {
+    case VLC_ML_EVENT_MEDIA_THUMBNAIL_GENERATED:
+    {
+        if (event.media_thumbnail_generated.i_size != VLC_ML_THUMBNAIL_SMALL)
+            return;
+        const auto id = MLItemId(event.media_thumbnail_generated.i_media_id, VLC_ML_PARENT_UNKNOWN);
+        if (!event.media_thumbnail_generated.b_success)
+            retryThumbnail(id);
+        else
+        {
+            m_requestedThumbnails.remove(id.id);
+            m_thumbnailRetryPending.remove(id.id);
+            m_thumbnailAttempts.remove(id.id);
+        }
+        MLBaseModel::onVlcMlEvent(event);
+        return;
+    }
     // common
     case VLC_ML_EVENT_MEDIA_ADDED:
         emit resetRequested();
@@ -236,18 +252,24 @@ void MLMediaModel::thumbnailUpdated(const QModelIndex& idx, MLItem* item,
     {
         video->setSmallCover(status, mrl);
         emit dataChanged(idx, idx);
-        const auto id = video->getId();
-        if (status == VLC_ML_THUMBNAIL_STATUS_FAILURE && m_thumbnailAttempts.value(id.id) < 3)
-        {
-            const int delay = m_thumbnailAttempts.value(id.id) < 2 ? 3000 : 10000;
-            QTimer::singleShot(delay, this, [this, id] {
-                m_requestedThumbnails.remove(id.id);
-                int row = 0;
-                if (findInCache(id, &row))
-                    emit dataChanged(index(row), index(row));
-            });
-        }
     }
+}
+
+void MLMediaModel::retryThumbnail(MLItemId id)
+{
+    if (!m_requestedThumbnails.contains(id.id) || m_thumbnailAttempts.value(id.id) >= 3
+        || m_thumbnailRetryPending.contains(id.id))
+        return;
+    m_thumbnailRetryPending.insert(id.id);
+    const int delay = m_thumbnailAttempts.value(id.id) < 2 ? 3000 : 10000;
+    QTimer::singleShot(delay, this, [this, id] {
+        if (!m_thumbnailRetryPending.remove(id.id))
+            return; // A successful completion superseded this retry.
+        m_requestedThumbnails.remove(id.id);
+        int row = 0;
+        if (findInCache(id, &row))
+            emit dataChanged(index(row), index(row));
+    });
 }
 
 void MLMediaModel::generateThumbnail(const MLVideo *video) const
@@ -255,16 +277,22 @@ void MLMediaModel::generateThumbnail(const MLVideo *video) const
     assert(video != nullptr);
     const int64_t id = video->getId().id;
     // Coalesce redraws while a request or its delayed retry is pending.
-    if (m_requestedThumbnails.contains(id))
+    if (m_requestedThumbnails.contains(id) || m_thumbnailAttempts.value(id) >= 3)
         return;
     m_requestedThumbnails.insert(id);
     ++m_thumbnailAttempts[id];
 
-    // on ML thread
-    m_mediaLib->runOnMLThread(this, [id = video->getId().id](vlc_medialibrary_t *ml)
-    {
-        vlc_ml_media_generate_thumbnail(ml, id, VLC_ML_THUMBNAIL_SMALL, 512, 320, .15);
-    });
+    // Handle immediate rejection as well as asynchronous failure events.
+    auto *self = const_cast<MLMediaModel *>(this);
+    const auto itemId = video->getId();
+    m_mediaLib->runOnMLThread<int>(this,
+        [id](vlc_medialibrary_t *ml, int &result) {
+            result = vlc_ml_media_generate_thumbnail(ml, id, VLC_ML_THUMBNAIL_SMALL, 512, 320, .15);
+        },
+        [self, itemId](quint64, int &result) {
+            if (result != VLC_SUCCESS)
+                self->retryThumbnail(itemId);
+        });
 }
 
 // Loader related member functions

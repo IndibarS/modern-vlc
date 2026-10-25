@@ -76,29 +76,6 @@ FirstRunWizard::FirstRunWizard( qt_intf_t *_p_intf, QWidget *parent)
     colorSchemeImages->addButton( ui.lightImage );
     colorSchemeImages->addButton( ui.darkImage );
 
-    /* Setup the layout page */
-    ui.layoutGroup->setId( ui.modernButton, 0 );
-    ui.layoutGroup->setId( ui.classicButton, 1 );
-
-    layoutImages = new QButtonGroup( this );
-    layoutImages->addButton( ui.modernImage );
-    layoutImages->addButton( ui.classicImage );
-    layoutImages->setId( ui.modernImage, MODERN );
-    layoutImages->setId( ui.classicImage, CLASSIC );
-
-    /* Set the tooltips for each of the layout choices */
-    ui.classicButton->setToolTip( qtr("<ul>"
-                                      "<li>No client-side decoration</li>"
-                                      "<li>Toolbar menu</li>"
-                                      "<li>Pinned video controls</li>"
-                                      "</ul>") );
-
-    ui.modernButton->setToolTip( qtr("<ul>"
-                                     "<li>Client-side decoration</li>"
-                                     "<li>No toolbar menu</li>"
-                                     "<li>Video controls unpinned</li>"
-                                     "</ul>") );
-
     /* Remove the cancel button */
     setOption( QWizard::NoCancelButton );
 
@@ -123,8 +100,6 @@ FirstRunWizard::FirstRunWizard( qt_intf_t *_p_intf, QWidget *parent)
     connect( ui.addButton, &QPushButton::clicked, this, &FirstRunWizard::MLaddNewFolder );
     connect( colorSchemeGroup, qOverload<QAbstractButton*>( &QButtonGroup::buttonClicked ), this, &FirstRunWizard::updateColorLabel );
     connect( colorSchemeImages, qOverload<QAbstractButton*>( &QButtonGroup::buttonClicked ), this, &FirstRunWizard::imageColorSchemeClick );
-    connect( ui.layoutGroup, qOverload<QAbstractButton*>( &QButtonGroup::buttonClicked ), this, &FirstRunWizard::updateLayoutLabel );
-    connect( layoutImages, qOverload<QAbstractButton*>( &QButtonGroup::buttonClicked ), this, &FirstRunWizard::imageLayoutClick );
     connect( this->button(QWizard::FinishButton), &QPushButton::clicked, this, &FirstRunWizard::finish );
 }
 
@@ -141,21 +116,17 @@ void FirstRunWizard::finish()
     /* Colour Page settings */
     p_intf->p_mi->getColorScheme()->setCurrentIndex( colorSchemeGroup->checkedId() );
 
-    /* Layout Page settings */
-    config_PutInt( "qt-menubar", ui.layoutGroup->checkedId() );
-    config_PutInt( "qt-titlebar", ui.layoutGroup->checkedId() );
+    /* Use the shared interface layout. */
+    config_PutInt( "qt-menubar", 0 );
+    config_PutInt( "qt-titlebar", 0 );
 
-    config_PutInt( "qt-pin-controls", ui.layoutGroup->checkedId() );
+    config_PutInt( "qt-pin-controls", 0 );
 
     {
         ControlbarProfileModel* controlbarModel = p_intf->p_mi->controlbarProfileModel();
         assert(controlbarModel);
 
-        ControlbarProfileModel::Style style;
-        if( ui.layoutGroup->checkedId() )
-            style = ControlbarProfileModel::Style::CLASSIC_STYLE;
-        else
-            style = ControlbarProfileModel::Style::DEFAULT_STYLE;
+        const auto style = ControlbarProfileModel::Style::DEFAULT_STYLE;
 
         std::unique_ptr<ControlbarProfile> profile( controlbarModel->generateProfileFromStyle( style ) );
         assert( profile );
@@ -214,23 +185,6 @@ void FirstRunWizard::updateColorLabel( QAbstractButton* btn )
 }
 
 /**
- * Automatically updates the label depending on the currently selected layout
- * @param id The id of the button we are updating the label of
- */
-void FirstRunWizard::updateLayoutLabel( QAbstractButton* btn )
-{
-    switch ( ui.layoutGroup->id( btn ) )
-    {
-        case MODERN:
-            ui.layoutExplainer->setText( qtr( "<i>VLC will use a modern layout with no menubar or pinned controls but with client-side decoration</i>" ) );
-            break;
-        case CLASSIC:
-            ui.layoutExplainer->setText( qtr( "<i>VLC will use a classic layout with a menubar and pinned controls but with no client-side decoration</i>" ) );
-            break;
-    }
-}
-
-/**
  * Checks the correct button when the corresponding image is clicked
  * for the color scheme page.
  * @param id The id of the image that was clicked
@@ -241,19 +195,6 @@ void FirstRunWizard::imageColorSchemeClick( QAbstractButton* btn )
     assert( groupBtn );
     groupBtn->setChecked( true );
     updateColorLabel( groupBtn );
-}
-
-/**
- * Checks the correct button when the corresponding image is clicked
- * for the layouts page.
- * @param id The id of the image that was clicked
- */
-void FirstRunWizard::imageLayoutClick( QAbstractButton* btn )
-{
-    QAbstractButton* layoutBtn = ui.layoutGroup->buttons().at( layoutImages->id( btn ) );
-    assert( layoutBtn );
-    layoutBtn->setChecked( true );
-    updateLayoutLabel( layoutBtn );
 }
 
 /**
@@ -272,7 +213,7 @@ int FirstRunWizard::nextId() const
         case FOLDER_PAGE:
             return COLOR_SCHEME_PAGE;
         case COLOR_SCHEME_PAGE:
-            return LAYOUT_PAGE;
+            return -1;
         default:
             return -1;
     }
@@ -324,7 +265,7 @@ void FirstRunWizard::reject()
     /* Colour Page settings */
     p_intf->p_mi->getColorScheme()->setCurrentIndex( 0 );
 
-    /* Layout Page settings */
+    /* Use the shared interface layout. */
     config_PutInt( "qt-menubar", 0 );
     config_PutInt( "qt-titlebar", 0 );
     p_intf->p_mi->setPinVideoControls( 0 );

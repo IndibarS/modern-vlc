@@ -130,6 +130,7 @@ T.Slider {
 
     HoverHandler {
         id: hoverHandler
+        cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
 
         enabled: true
 

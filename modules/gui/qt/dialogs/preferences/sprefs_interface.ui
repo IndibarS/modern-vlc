@@ -106,31 +106,6 @@
          </item>
          <item row="0" column="1">
           <layout class="QVBoxLayout" name="verticalLayout_8">
-           <item>
-            <widget class="QPushButton" name="modernImage">
-             <property name="toolTip">
-              <string>VLC will use a modern layout with
-no menubar or pinned controls but
-with client-side decoration.</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>:/prefsmenu/sample_minimal.png</normaloff>:/prefsmenu/sample_minimal.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>244</width>
-               <height>145</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
            <item alignment="Qt::AlignHCenter">
             <widget class="QRadioButton" name="modernButton">
              <property name="toolTip">
@@ -139,7 +114,7 @@ no menubar or pinned controls but
 with client-side decoration.</string>
              </property>
              <property name="text">
-              <string>Modern</string>
+              <string>Default window layout</string>
              </property>
              <property name="checked">
               <bool>true</bool>
@@ -150,43 +125,6 @@ with client-side decoration.</string>
          </item>
          <item row="0" column="2">
           <layout class="QVBoxLayout" name="verticalLayout_7">
-           <item>
-            <widget class="QPushButton" name="classicImage">
-             <property name="toolTip">
-              <string>VLC will use a classic layout with
-a menubar and pinned controls but
-with no client-side decoration.</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>:/prefsmenu/sample_complete.png</normaloff>:/prefsmenu/sample_complete.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>244</width>
-               <height>145</height>
-              </size>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QRadioButton" name="classicButton">
-             <property name="toolTip">
-              <string>VLC will use a classic layout with
-a menubar and pinned controls but
-with no client-side decoration.</string>
-             </property>
-             <property name="text">
-              <string>Classic</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
          <item row="1" column="1" colspan="2">
